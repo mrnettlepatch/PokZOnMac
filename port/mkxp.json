@@ -1,0 +1,35 @@
+{
+    // Configuración de mkxp-z para Pokémon Z en macOS.
+    // Las líneas que empiezan por '//' son comentarios.
+
+    "rgssVersion": 1,
+    "windowTitle": "Pokemon Z",
+    "winResizable": true,
+    "fixedAspectRatio": true,
+    "smoothScaling": 0,
+    "defScreenW": 1024,
+    "defScreenH": 768,
+
+    // La opción VSync del menú del juego modifica estas tres líneas.
+    "vsync": false,
+    "fixedFramerate": 60,
+    "syncToRefreshrate": false,
+
+    "subImageFix": false,
+    "enableBlitting": true,
+    "pathCache": false,
+    "useScriptNames": true,
+    "SESourceCount": 12,
+
+    // Carpeta donde se guardan las partidas y la configuración:
+    // ~/Library/Application Support/PokemonZ/PokemonZ
+    "dataPathOrg": "PokemonZ",
+    "dataPathApp": "PokemonZ",
+
+    "preloadScript": [
+        "scripts/preload/ruby_classic_wrap.rb",
+        "scripts/preload/mkxp_wrap.rb",
+        "scripts/preload/win32_wrap.rb",
+        "scripts/preload/pokemonz_mac.rb"
+    ]
+}
