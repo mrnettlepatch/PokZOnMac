@@ -93,6 +93,26 @@ cp "$PORT/mkxp.json" "$G/mkxp.json"
 cp "$PORT/mando_xbox.mkxp1" "$G/mando_xbox.mkxp1"
 ok "Compatibilidad macOS instalada"
 
+# Icono: se genera a partir del logo del propio juego (no se incluye en el repo)
+info "Creando el icono"
+LOGO="$G/Graphics/Titles/pokelogo.png"
+ICONSET="$WORK/AppIcon.iconset"
+if [ -f "$LOGO" ] && xcrun -f swift >/dev/null 2>&1 \
+   && swift "$PORT/crear_icono.swift" "$LOGO" "$WORK/icon_1024.png" >/dev/null 2>&1; then
+  mkdir -p "$ICONSET"
+  for s in 16 32 128 256 512; do
+    sips -z $s $s "$WORK/icon_1024.png" --out "$ICONSET/icon_${s}x${s}.png" >/dev/null
+    sips -z $((s*2)) $((s*2)) "$WORK/icon_1024.png" --out "$ICONSET/icon_${s}x${s}@2x.png" >/dev/null
+  done
+  ICNS="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$APP/Contents/Info.plist" 2>/dev/null || echo icon.icns)"
+  iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/$ICNS"
+  sips -z 512 512 "$WORK/icon_1024.png" --out "$G/icono.png" >/dev/null
+  ok "Icono creado con el logo del juego"
+else
+  sed -i '' '/"iconPath"/d' "$G/mkxp.json"
+  warn "No se pudo crear el icono (hace falta Swift: xcode-select --install); se usa el de mkxp-z."
+fi
+
 # 4. Info.plist, firma y ajustes ----------------------------------------------
 info "Configurando y firmando la app"
 P="$APP/Contents/Info.plist"

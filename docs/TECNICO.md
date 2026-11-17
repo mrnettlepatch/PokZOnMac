@@ -103,6 +103,18 @@ El mapeado del port pone el menú también en X y Start, y asigna el resto de fu
 
 Para cambiarlo, edita `port/generar_mando.py` y ejecuta `python3 port/generar_mando.py port/mando_xbox.mkxp1`.
 
+## Icono
+
+`port/crear_icono.swift` dibuja el icono con CoreGraphics:
+
+- el cuadrado redondeado estándar de macOS (824 px en un lienzo de 1024);
+- un degradado azul como el fondo del título (`gen_2_bg`);
+- rayos y resplandor dorados;
+- hojas doradas sueltas;
+- el logo del juego (`Graphics/Titles/pokelogo.png`), recortado a su contenido y centrado.
+
+`construir.sh` lo convierte en `.icns` con `sips` + `iconutil` y lo pone también como icono de ventana (`iconPath` en `mkxp.json`). El logo es arte del juego, así que no se incluye en el repositorio: se toma de la copia de cada persona.
+
 ## Cómo se probó
 
 Se añadió un módulo de pruebas temporal que simulaba teclas, escribía texto, lanzaba scripts dentro del juego y guardaba capturas con la función original `Graphics.snap_to_bitmap`. Con él se probaron:

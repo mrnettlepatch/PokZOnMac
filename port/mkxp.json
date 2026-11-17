@@ -4,6 +4,7 @@
 
     "rgssVersion": 1,
     "windowTitle": "Pokemon Z",
+    "iconPath": "icono.png",
     "winResizable": true,
     "fixedAspectRatio": true,
     "smoothScaling": 0,

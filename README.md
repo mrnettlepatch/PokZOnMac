@@ -16,6 +16,7 @@ PokZOnMac convierte la versión de Windows de **Pokémon Z v2.19** (fangame de l
 - La carpeta del juego de Windows: **Pokémon Z v2.19** (la que contiene `Game.exe`, `Game.ini`, `Data`, `Graphics`, `Audio`...).
 - Conexión a internet la primera vez (el script descarga mkxp-z).
 - Ruby (viene de serie con macOS).
+- Opcional, para el icono: Swift (herramientas de línea de comandos de Xcode: `xcode-select --install`).
 
 ## Instalación
 
@@ -99,6 +100,7 @@ Las versiones de Windows y JoiPlay ejecutan el juego con **Ruby 1.8**, y mkxp-z 
 - **`port/patches.rb`**: 16 correcciones de líneas concretas de los scripts del juego.
 - **`port/macos_rtp.rb`** y **`port/macos_section.rb`**: dos secciones nuevas que se insertan en `Scripts.rxdata`. Cubren la carpeta de partidas, la resolución, el texto, las capturas de pantalla y la escritura con el teclado.
 - **`port/mando_xbox.mkxp1`**: el mapeado de mando, generado con `port/generar_mando.py`.
+- **`port/crear_icono.swift`**: crea el icono de la app a partir del logo de tu copia del juego (`Graphics/Titles/pokelogo.png`), sobre un fondo inspirado en la pantalla de título. Necesita Swift (`xcode-select --install`); sin él, la app usa el icono de mkxp-z.
 
 Los detalles de cada problema y su solución están en [docs/TECNICO.md](docs/TECNICO.md).
 
