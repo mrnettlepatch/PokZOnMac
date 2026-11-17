@@ -64,6 +64,16 @@ Son de dos tipos: diferencias generales, resueltas en `pokemonz_mac.rb`, y líne
 | `Kernel.respond_to?("pbSetResizeFactor")` era `true` en 1.8 | el juego anulaba `Graphics.snap_to_bitmap` (devolvía `nil`); fallaba la transición de combate contra entrenadores | `respond_to?(..., true)` (parche) |
 | `SDLError` no es `StandardError` | un `rescue` simple no capturaba un fallo al cargar una imagen | `Bitmap#initialize` lo convierte en `Errno::ENOENT` |
 
+### Ruby 3.2 y posteriores
+
+Para que la capa funcione también con versiones más nuevas de Ruby (por ejemplo, el núcleo web de mkxp-z, que usa Ruby 3.3):
+
+- **Métodos eliminados en Ruby 3.2:** `File.exists?`, `FileTest.exists?`, `Dir.exists?` y `Object#=~`. Se definen siempre, igual que los de `ruby_classic_wrap.rb` (`Object#id`, `#type`, `Hash#index`) y los de Ruby 1.8 (`Array#nitems`, `String#each`, `Thread.critical`). No se comprueba antes si existen, porque en algunos builds `method_defined?` da "existe" para métodos marcados como no implementados.
+- **`pokemonz_mac.rb` es idempotente:** si un motor lo carga dos veces, la segunda carga no hace nada.
+- **`Marshal.load`:** sin función propia se llama con un solo argumento. mkxp-z ya marca los textos como UTF-8, y el `Marshal.load` de dos argumentos del núcleo web tiene un fallo.
+- **Carpeta temporal:** `TEMP` apunta a la primera carpeta que exista de verdad.
+- **Núcleo libretro:** se detecta con `System.platform == "libretro"`. En ese caso se usa el `pathCache` del motor en lugar del índice de rutas en Ruby, que sin JIT es demasiado lento.
+
 ### Detalles de mkxp-z en macOS
 
 - **Mayúsculas en las rutas.** PhysFS las distingue (`overworldshadow.png` frente a `.PNG`), y la opción `pathCache`, que lo emula, hace que esta versión de mkxp-z se cuelgue con este juego (fallo de segmento en `PHYSFS_enumerate`). La solución es `pathCache: false` más un índice propio en Ruby (`PokemonZPaths`) que corrige la ruta en `Bitmap.new`, `Audio.*_play` y `load_data`.

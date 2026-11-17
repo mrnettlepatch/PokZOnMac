@@ -1,4 +1,9 @@
 # pokemonz_mac.rb
+# (Protección: algunos motores, como el núcleo web de mkxp-z, cargan los
+#  scripts de mkxp.json dos veces; la segunda carga no debe hacer nada.)
+unless $pokemonz_mac_loaded
+$pokemonz_mac_loaded = true
+
 # Adaptaciones de Pokémon Z (Essentials + mkxp-z) para macOS.
 # Se carga después de win32_wrap.rb, que ya emula teclado/ratón de Win32API.
 # Aquí se añaden las funciones de Windows que usan los scripts del juego
@@ -7,7 +12,8 @@
 $MKXP = true
 
 # Variables de entorno de Windows que usan los scripts
-ENV["TEMP"] ||= (ENV["TMPDIR"] || "/tmp").sub(/\/+\z/, "")
+ENV["TEMP"] ||= [ENV["TMPDIR"], "/tmp", (System.data_directory rescue nil), Dir.pwd].compact.
+  map { |d| d.to_s.sub(/\/+\z/, "") }.find { |d| !d.empty? && File.directory?(d) }
 ENV["TMP"] ||= ENV["TEMP"]
 
 # Resolución nativa del juego (DEFAULTSCREENWIDTH x DEFAULTSCREENHEIGHT).
@@ -31,6 +37,8 @@ end
 
 # Carpeta del juego (Contents/Game) y bundle .app que lo contiene.
 POKEMONZ_GAME_DIR = Dir.pwd
+# Núcleo web (libretro): sin JIT, ya trae pathCache y conversión UTF-8
+POKEMONZ_WEB = ((System.platform rescue "").to_s.downcase == "libretro")
 POKEMONZ_APP_BUNDLE = File.expand_path("../..", POKEMONZ_GAME_DIR)
 
 # Carpeta de partidas: ~/Library/Application Support/PokemonZ/PokemonZ
@@ -217,22 +225,34 @@ end
 #===============================================================================
 # Compatibilidad Ruby 1.8 -> Ruby 3 (el juego se escribió para Ruby 1.8)
 #===============================================================================
-class Thread
-  class << self
-    def critical; false; end unless method_defined?(:critical)
-    def critical=(v); v; end unless method_defined?(:critical=)
-  end
+# Ninguno de estos métodos existe en Ruby 3.x, así que se definen siempre.
+# (No se comprueba antes: en el Ruby del núcleo web, method_defined? e
+#  instance_method dan "existe" para métodos marcados como no implementados.)
+def pokemonz_define(mod, name, &body)
+  mod.send(:define_method, name, &body)
 end
 
-class Array
-  def nitems; count { |x| !x.nil? }; end unless method_defined?(:nitems)
-end
+pokemonz_define(Thread.singleton_class, :critical) { false }
+pokemonz_define(Thread.singleton_class, :critical=) { |v| v }
 
-class String
-  def each(*args, &block)
-    each_line(*args, &block)
-  end unless method_defined?(:each)
-end
+# Métodos eliminados en Ruby 3.2 (el núcleo web usa Ruby 3.3)
+pokemonz_define(File.singleton_class, :exists?) { |f| File.exist?(f) }
+pokemonz_define(FileTest.singleton_class, :exists?) { |f| FileTest.exist?(f) }
+pokemonz_define(Dir.singleton_class, :exists?) { |f| Dir.exist?(f) }
+pokemonz_define(Object, :=~) { |_other| nil }
+
+# Equivalentes de ruby_classic_wrap.rb (Object#id, #type, Hash#index...)
+pokemonz_define(Object, :id) { object_id }
+pokemonz_define(Object, :type) { self.class }
+pokemonz_define(Hash, :index) { |v| key(v) }
+NilClass.send(:define_method, :id) { 4 }
+TrueClass.send(:define_method, :id) { 2 }
+Object.const_set(:TRUE, true) unless Object.const_defined?(:TRUE)
+Object.const_set(:FALSE, false) unless Object.const_defined?(:FALSE)
+Object.const_set(:NIL, nil) unless Object.const_defined?(:NIL)
+
+pokemonz_define(Array, :nitems) { count { |x| !x.nil? } }
+pokemonz_define(String, :each) { |*args, &block| each_line(*args, &block) }
 
 # Ruby 1.8 no tenía codificaciones: los textos guardados en los .rxdata/.dat
 # se cargan como binarios. Se marcan como UTF-8 para que acentos y eñes
@@ -276,13 +296,19 @@ end
 module Marshal
   class << self
     alias_method :pokemonz_orig_load, :load
+    # Sin proc propio se llama con un solo argumento y se corrige el resultado
+    # después: el Marshal.load de 2 argumentos del núcleo web de mkxp-z usa el
+    # primer argumento como proc (fallo del motor).
     def load(source, proc = nil, **kw)
-      user = proc
-      fixer = lambda do |o|
-        PokemonZEncoding.fix_string(o) if o.is_a?(String)
-        user ? user.call(o) : o
+      if proc.respond_to?(:call)
+        fixer = lambda do |o|
+          PokemonZEncoding.fix_string(o) if o.is_a?(String)
+          proc.call(o)
+        end
+        pokemonz_orig_load(source, fixer, **kw)
+      else
+        pokemonz_orig_load(source, **kw) # mkxp-z ya marca los textos como UTF-8
       end
-      pokemonz_orig_load(source, fixer, **kw)
     end
     alias_method :restore, :load
   end
@@ -290,6 +316,7 @@ end
 
 alias pokemonz_orig_load_data load_data
 def load_data(filename)
+  return pokemonz_orig_load_data(filename) if POKEMONZ_WEB
   PokemonZEncoding.fix(pokemonz_orig_load_data(filename))
 end
 
@@ -336,6 +363,7 @@ module PokemonZPaths
 
   # Devuelve la ruta con las mayúsculas reales del disco, o la original.
   def self.resolve(path)
+    return path if POKEMONZ_WEB # en la web se usa pathCache del motor
     return path unless path.is_a?(String) && !path.empty?
     p = normalize(path)
     return path if p.start_with?("/")
@@ -411,3 +439,5 @@ begin
   File.binwrite(kb, File.binread(src)) if !File.exist?(kb) && File.exist?(src)
 rescue
 end
+
+end # unless $pokemonz_mac_loaded
